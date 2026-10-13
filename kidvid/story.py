@@ -44,7 +44,7 @@ Now write scenes {first} to {last}, one scene per beat:
 {beats}
 
 For each scene:
-- "narration": exactly THREE short, simple, fun sentences (about 30-40 words in total) read aloud to kids aged 3-8.
+- "narration": THREE or FOUR short, simple, fun sentences (about 35-50 words in total) read aloud to kids aged 3-8.
   Example narration: "Benny the bear woke up with a big yawn. The sun was shining and the birds were singing. Today was the day of the great picnic!"
 - "picture": ONE illustration in under 20 words: who is in it, what they are doing, where. No text in the picture.
 
@@ -159,7 +159,7 @@ def release_writer() -> None:
         _cached = None
 
 
-def write_story(idea: str, num_scenes: int = 12, batch: int = 4) -> Story:
+def write_story(idea: str, num_scenes: int = 14, batch: int = 4) -> Story:
     """Plan the story as beats first, then write the scenes a few beats at a time (keeps small models on track)."""
     writer = get_writer()
     outline = writer.ask_json(OUTLINE_PROMPT.format(idea=idea.strip(), n=num_scenes), 40 * num_scenes + 200)

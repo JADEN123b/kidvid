@@ -11,7 +11,7 @@ Turn a one-line idea into a narrated, animated kids video that runs for several 
 | Narration | Kokoro-82M | CPU or GPU |
 | Video assembly | ffmpeg (Ken Burns pan/zoom, captions, fades, music mix) | CPU |
 
-Video length depends on how many scenes you ask for. Each scene lasts about 10-15 seconds, so 12 scenes come to roughly 2.5 minutes and 24 scenes to roughly 5 minutes.
+Video length depends on how many scenes you ask for (12-30, default 14). A full video always lasts at least 1.5 minutes: if the narration is short, each scene is held a little longer. 14 scenes come to roughly 1.5-2.5 minutes and 30 scenes to roughly 5 minutes.
 
 ## Option A: Google Colab (free GPU, any computer)
 
@@ -34,7 +34,7 @@ python app.py                                        # then open http://localhos
 ## Using it
 
 1. **Write the story.** Pick one:
-   - **Chat with Buddy:** for example "write a story about a dragon who loves baking, 10 scenes", then "make scene 3 funnier" or "add a talking owl after scene 2".
+   - **Chat with Buddy:** for example "write a story about a dragon who loves baking, 16 scenes", then "make scene 3 funnier" or "add a talking owl after scene 2".
    - **Quick story:** type an idea and pick the number of scenes.
    - **My own story:** paste your text with a blank line between scenes.
 2. **Edit the script** (JSON) if you like. `characters` is added to every picture prompt to keep characters consistent.

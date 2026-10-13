@@ -52,9 +52,9 @@ def on_chat(message, history, story_json):
         spec = command["new_story"]
         idea = str(spec.get("idea") or message)
         try:
-            scenes = max(4, min(30, int(spec.get("scenes", 12))))
+            scenes = max(12, min(30, int(spec.get("scenes", 14))))
         except (TypeError, ValueError):
-            scenes = 12
+            scenes = 14
         shown[-1] = {"role": "assistant", "content": f"{text}\n\n*Writing a {scenes}-scene story about: {idea} ...*"}
         yield shown, story_json, ""
         new = write_story(idea, scenes)
@@ -114,7 +114,7 @@ with gr.Blocks(title="KidVid - personal kids video maker") as demo:
                 chat_btn = gr.Button("Send", variant="primary")
             with gr.Tab("1b. Quick story"):
                 idea = gr.Textbox(label="Story idea", placeholder="A shy little turtle who learns to swim with new friends")
-                num_scenes = gr.Slider(4, 30, value=12, step=1, label="Number of scenes (~8-15 seconds each)")
+                num_scenes = gr.Slider(12, 30, value=14, step=1, label="Number of scenes (videos are always at least 1.5 minutes)")
                 write_btn = gr.Button("Write story", variant="primary")
             with gr.Tab("1c. My own story"):
                 own_title = gr.Textbox(label="Title", value="My Story")

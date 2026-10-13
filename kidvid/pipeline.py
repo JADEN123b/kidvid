@@ -15,6 +15,8 @@ from .video import FPS, Caption, Shot, frame_count, render
 PAUSE = 0.35
 LEAD_IN = 0.5
 TAIL = 0.8
+MIN_SECONDS = 90.0
+MAX_EXTRA_PAUSE = 4.0
 
 Progress = Callable[[float, str], None]
 
@@ -47,6 +49,19 @@ def _pad_to_frames(audio: np.ndarray) -> tuple[np.ndarray, float]:
     n = frame_count(duration)
     target = round(n / FPS * SAMPLE_RATE)
     return np.pad(audio, (0, max(0, target - len(audio))))[:target], n / FPS
+
+
+def _stretch_to_minimum(tracks: list, n: int) -> list:
+    """Give each scene a little extra breathing room so a full video lasts at least MIN_SECONDS."""
+    total = sum(t[1] for t in tracks)
+    if total >= MIN_SECONDS or n == 0:
+        return tracks
+    extra = min(MAX_EXTRA_PAUSE, (MIN_SECONDS - total) / n + 1 / FPS)
+    gap = np.zeros(int(extra * SAMPLE_RATE), dtype=np.float32)
+    for i in range(1, n + 1):
+        audio, _, captions = tracks[i]
+        tracks[i] = _pad_to_frames(np.concatenate([audio, gap])) + (captions,)
+    return tracks
 
 
 def make_video(
@@ -86,6 +101,7 @@ def make_video(
         tracks.append(_pad_to_frames(audio) + (captions,))
     end_audio, end_caps = _narrate(narrator, "The end.")
     tracks.append(_pad_to_frames(end_audio) + (end_caps,))
+    tracks = _stretch_to_minimum(tracks, n)
     del narrator
 
     from .images import Illustrator

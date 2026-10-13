@@ -16,11 +16,11 @@ Current script:
 
 If the user wants to CHANGE the script: reply in one or two friendly sentences, then ONE ```json block using only the keys you need:
 {{"title": "...", "characters": "...", "setting": "...", "edit": [{{"scene": 3, "narration": "...", "picture": "..."}}], "delete": [5], "add": [{{"after": 2, "narration": "...", "picture": "..."}}]}}
-Scene numbers start at 1. "narration" is 2-3 short sentences read aloud. "picture" describes one illustration in under 20 words.
+Scene numbers start at 1. "narration" is 3-4 short sentences read aloud. "picture" describes one illustration in under 20 words.
 
 If the user wants a BRAND NEW story: reply briefly, then:
 ```json
-{{"new_story": {{"idea": "...", "scenes": 12}}}}
+{{"new_story": {{"idea": "...", "scenes": 14}}}}
 ```
 
 Otherwise just chat, with no JSON."""
