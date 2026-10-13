@@ -67,6 +67,8 @@ class Animator:
         prompt = scene_prompt(picture, characters, setting, self.embeds is not None) + ", gentle lively motion"
         return self.pipe(
             video=_drift(image, self.frames, self.width, self.height),
+            height=self.height,
+            width=self.width,
             prompt=prompt,
             negative_prompt=NEGATIVE,
             strength=strength,
