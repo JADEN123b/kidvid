@@ -1,13 +1,14 @@
 # KidVid: a free, personal kids video maker
 
-Turn a one-line idea into a narrated kids video that runs for several minutes, with pictures, gentle motion, subtitles, a title card, and optional background music. Everything runs on free, open models on your own machine or in free Google Colab. There are no paid APIs and no accounts to sign up for.
+Turn a one-line idea into a narrated, animated kids video that runs for several minutes. You can chat with a story assistant, upload reference pictures so every scene matches your character or art style, and add optional background music. Everything runs on free, open models on your own machine or in free Google Colab. There are no paid APIs and no accounts to sign up for.
 
 | Step | Model (free, open) | Runs on |
 |---|---|---|
-| Story script | Qwen2.5 Instruct (1.5B on CPU, 3B on GPU) | CPU or GPU |
-| Pictures | SD-Turbo (CPU) / SDXL-Turbo (GPU) | CPU or GPU |
+| Story script + chatbot | Qwen2.5 Instruct (1.5B on CPU, 3B on GPU) | CPU or GPU |
+| Pictures | DreamShaper 8 (SD 1.5) + LCM-LoRA, 4-6 steps | CPU or GPU |
+| Match reference pictures | IP-Adapter (SD 1.5) | CPU or GPU |
+| Animation | AnimateDiff + AnimateLCM, picture-to-animation (video-to-video) | GPU fast; CPU a few minutes per scene |
 | Narration | Kokoro-82M | CPU or GPU |
-| Optional AI motion | LTX-Video (image-to-video) | GPU only (Colab T4 is fine) |
 | Video assembly | ffmpeg (Ken Burns pan/zoom, captions, fades, music mix) | CPU |
 
 Video length depends on how many scenes you ask for. Each scene lasts about 10-15 seconds, so 12 scenes come to roughly 2.5 minutes and 24 scenes to roughly 5 minutes.
@@ -32,9 +33,14 @@ python app.py                                        # then open http://localhos
 
 ## Using it
 
-1. **Write the story.** Type an idea and pick the number of scenes, or paste your own story with a blank line between scenes.
+1. **Write the story.** Pick one:
+   - **Chat with Buddy:** for example "write a story about a dragon who loves baking, 10 scenes", then "make scene 3 funnier" or "add a talking owl after scene 2".
+   - **Quick story:** type an idea and pick the number of scenes.
+   - **My own story:** paste your text with a blank line between scenes.
 2. **Edit the script** (JSON) if you like. `characters` is added to every picture prompt to keep characters consistent.
-3. Pick a voice and speed, optionally add a music file, and click **Make video**.
+3. **Optional reference pictures:** upload your character or an art style. The slider controls how closely scenes copy it.
+4. **Animate:** leave it ticked for moving scenes, or untick it for faster storybook-style pan and zoom.
+5. Pick a voice, optionally add music, and click **Make video**.
 
 Each run is saved to `outputs/<timestamp>/` and contains the MP4, `story.json`, the narration WAV, and every scene picture.
 
@@ -49,6 +55,7 @@ print(make_video(story, voice="Heart (warm female, US)", motion=False))
 
 ## Notes
 
-- Model licences: SD-Turbo/SDXL-Turbo are licensed for non-commercial use, which is fine for personal use. Do not sell videos made with them without checking each licence.
+- Every model here is free to download. Check each model's licence before using videos commercially.
 - Free Colab sessions time out after a few hours, and the models download again each session.
-- AI motion takes about 1-3 minutes per scene on a T4. Storybook mode is much faster.
+- Animation takes seconds per scene on a Colab T4 and a few minutes per scene on a CPU. Untick it for fast storybook mode.
+- Free Colab: run the notebook with the T4 GPU runtime for the best speed and the bigger story model.

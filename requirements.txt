@@ -2,6 +2,7 @@ torch
 diffusers>=0.32
 transformers>=4.46
 accelerate
+peft
 sentencepiece
 gradio>=5
 kokoro>=0.9.4

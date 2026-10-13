@@ -37,6 +37,7 @@ class Shot:
     duration: float
     captions: list[Caption] = field(default_factory=list)
     clip: list[Image.Image] | None = None
+    clip_fps: int = 8
     title: str | None = None
 
 
@@ -121,7 +122,7 @@ def render(shots: list[Shot], audio_wav: Path, out_path: Path, music: Path | Non
                 still = title_card(shot.image, shot.title)
                 frames = (still for _ in range(n))
             elif shot.clip:
-                frames = clip_frames(shot.clip, n)
+                frames = clip_frames(shot.clip, n, shot.clip_fps)
             else:
                 frames = ken_burns_frames(shot.image, n, si)
             overlays = [(c, caption_overlay(c.text)) for c in shot.captions]

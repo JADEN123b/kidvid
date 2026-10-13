@@ -69,14 +69,14 @@ class Story:
         return json.dumps(asdict(self), indent=2, ensure_ascii=False)
 
     @classmethod
-    def from_json(cls, text: str) -> "Story":
+    def from_json(cls, text: str, allow_empty: bool = False) -> "Story":
         data = _extract_json(text)
         scenes = [
             Scene(narration=str(s.get("narration", "")).strip(), picture=str(s.get("picture", "")).strip())
             for s in data.get("scenes", [])
             if str(s.get("narration", "")).strip()
         ]
-        if not scenes:
+        if not scenes and not allow_empty:
             raise ValueError("Story has no scenes with narration.")
         return cls(
             title=str(data.get("title", "My Story")).strip(),
@@ -141,43 +141,58 @@ class _Writer:
         free_memory()
 
 
-def write_story(idea: str, num_scenes: int = 12, model_id: str | None = None, batch: int = 4) -> Story:
+_cached: _Writer | None = None
+
+
+def get_writer() -> _Writer:
+    """The story model stays loaded between chat messages; call release_writer() before heavy image work."""
+    global _cached
+    if _cached is None:
+        _cached = _Writer(GPU_MODEL if has_gpu() else CPU_MODEL)
+    return _cached
+
+
+def release_writer() -> None:
+    global _cached
+    if _cached is not None:
+        _cached.close()
+        _cached = None
+
+
+def write_story(idea: str, num_scenes: int = 12, batch: int = 4) -> Story:
     """Plan the story as beats first, then write the scenes a few beats at a time (keeps small models on track)."""
-    writer = _Writer(model_id or (GPU_MODEL if has_gpu() else CPU_MODEL))
-    try:
-        outline = writer.ask_json(OUTLINE_PROMPT.format(idea=idea.strip(), n=num_scenes), 40 * num_scenes + 200)
-        beats = [_flatten(b) for b in outline.get("beats", []) if _flatten(b)][:num_scenes]
-        if not beats:
-            raise RuntimeError("The story model returned no story beats.")
-        title = _flatten(outline.get("title", "")) or "My Story"
-        if len(beats) < num_scenes:
-            plan = "\n".join(f"{i + 1}. {b}" for i, b in enumerate(beats))
-            try:
-                more = writer.ask_json(
-                    EXPAND_PROMPT.format(title=title, plan=plan, have=len(beats), n=num_scenes), 40 * num_scenes + 100
-                )
-                expanded = [_flatten(b) for b in more.get("beats", []) if _flatten(b)][:num_scenes]
-                if len(expanded) > len(beats):
-                    beats = expanded
-            except RuntimeError:
-                pass
-        characters = _flatten(outline.get("characters", ""))
-        setting = _flatten(outline.get("setting", ""))
+    writer = get_writer()
+    outline = writer.ask_json(OUTLINE_PROMPT.format(idea=idea.strip(), n=num_scenes), 40 * num_scenes + 200)
+    beats = [_flatten(b) for b in outline.get("beats", []) if _flatten(b)][:num_scenes]
+    if not beats:
+        raise RuntimeError("The story model returned no story beats.")
+    title = _flatten(outline.get("title", "")) or "My Story"
+    if len(beats) < num_scenes:
         plan = "\n".join(f"{i + 1}. {b}" for i, b in enumerate(beats))
-        scenes: list[Scene] = []
-        for first in range(0, len(beats), batch):
-            chunk = beats[first : first + batch]
-            prompt = SCENES_PROMPT.format(
-                title=title, characters=characters, setting=setting, plan=plan,
-                first=first + 1, last=first + len(chunk),
-                beats="\n".join(f"{first + i + 1}. {b}" for i, b in enumerate(chunk)),
+        try:
+            more = writer.ask_json(
+                EXPAND_PROMPT.format(title=title, plan=plan, have=len(beats), n=num_scenes), 40 * num_scenes + 100
             )
-            data = writer.ask_json(prompt, 110 * len(chunk) + 100)
-            written = [s for s in data.get("scenes", []) if isinstance(s, dict)]
-            for i, beat in enumerate(chunk):
-                s = written[i] if i < len(written) else {}
-                narration = _flatten(s.get("narration", "")) or beat
-                scenes.append(Scene(narration=narration, picture=_flatten(s.get("picture", "")) or beat))
-        return Story(title=title, characters=characters, setting=setting, scenes=scenes)
-    finally:
-        writer.close()
+            expanded = [_flatten(b) for b in more.get("beats", []) if _flatten(b)][:num_scenes]
+            if len(expanded) > len(beats):
+                beats = expanded
+        except RuntimeError:
+            pass
+    characters = _flatten(outline.get("characters", ""))
+    setting = _flatten(outline.get("setting", ""))
+    plan = "\n".join(f"{i + 1}. {b}" for i, b in enumerate(beats))
+    scenes: list[Scene] = []
+    for first in range(0, len(beats), batch):
+        chunk = beats[first : first + batch]
+        prompt = SCENES_PROMPT.format(
+            title=title, characters=characters, setting=setting, plan=plan,
+            first=first + 1, last=first + len(chunk),
+            beats="\n".join(f"{first + i + 1}. {b}" for i, b in enumerate(chunk)),
+        )
+        data = writer.ask_json(prompt, 110 * len(chunk) + 100)
+        written = [s for s in data.get("scenes", []) if isinstance(s, dict)]
+        for i, beat in enumerate(chunk):
+            s = written[i] if i < len(written) else {}
+            narration = _flatten(s.get("narration", "")) or beat
+            scenes.append(Scene(narration=narration, picture=_flatten(s.get("picture", "")) or beat))
+    return Story(title=title, characters=characters, setting=setting, scenes=scenes)

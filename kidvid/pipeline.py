@@ -7,7 +7,8 @@ import numpy as np
 import soundfile as sf
 
 from .device import has_gpu
-from .story import Scene, Story, write_story
+from .reference import load_references
+from .story import Scene, Story, release_writer, write_story
 from .tts import SAMPLE_RATE, Narrator, split_sentences
 from .video import FPS, Caption, Shot, frame_count, render
 
@@ -54,6 +55,9 @@ def make_video(
     voice: str = "Heart (warm female, US)",
     speed: float = 0.9,
     motion: bool = False,
+    references=None,
+    reference_strength: float = 0.6,
+    motion_strength: float = 0.6,
     music: str | Path | None = None,
     music_volume: float = 0.12,
     seed: int = 42,
@@ -65,6 +69,12 @@ def make_video(
     (run_dir / "story.json").write_text(story.to_json(), encoding="utf-8")
     n = len(story.scenes)
 
+    release_writer()
+    refs = load_references(references)
+    if refs:
+        (run_dir / "references").mkdir(exist_ok=True)
+        for i, r in enumerate(refs):
+            r.save(run_dir / "references" / f"ref_{i + 1}.png")
     progress(0.02, "Loading narrator voice")
     narrator = Narrator(voice, speed)
     tracks = []
@@ -81,7 +91,7 @@ def make_video(
     from .images import Illustrator
 
     progress(0.2, "Loading illustrator")
-    illustrator = Illustrator()
+    illustrator = Illustrator(refs, reference_strength)
     images = []
     for i, scene in enumerate(story.scenes):
         progress(0.22 + (0.33 if motion else 0.58) * i / n, f"Drawing scene {i + 1}/{n}")
@@ -91,21 +101,25 @@ def make_video(
     illustrator.close()
 
     clips: list = [None] * n
+    MOTION_FPS = 8
     if motion:
-        if not has_gpu():
-            raise RuntimeError("AI motion mode needs a GPU. Turn it off, or run in Google Colab.")
+        from .motion import FPS as MOTION_FPS
         from .motion import Animator
 
-        progress(0.55, "Loading animator (AI motion)")
-        animator = Animator()
+        progress(0.55, "Loading animator")
+        animator = Animator(refs, reference_strength)
+        slow = "" if has_gpu() else " (a few minutes each on CPU)"
         for i, scene in enumerate(story.scenes):
-            progress(0.57 + 0.23 * i / n, f"Animating scene {i + 1}/{n} (slow)")
-            clips[i] = animator.animate(images[i], scene.picture or scene.narration, seed + i)
+            progress(0.57 + 0.23 * i / n, f"Animating scene {i + 1}/{n}{slow}")
+            clips[i] = animator.animate(images[i], scene.picture or scene.narration, story.characters,
+                                        story.setting, seed + i, strength=motion_strength)
+            clips[i][0].save(run_dir / "scenes" / f"scene_{i + 1:02d}_anim_first.png")
         animator.close()
 
     shots = [Shot(images[0], tracks[0][1], title=story.title)]
     for i in range(n):
-        shots.append(Shot(images[i], tracks[i + 1][1], tracks[i + 1][2], clip=clips[i]))
+        shots.append(Shot(images[i], tracks[i + 1][1], tracks[i + 1][2], clip=clips[i],
+                          clip_fps=MOTION_FPS if motion else 8))
     shots.append(Shot(images[-1], tracks[-1][1], title="The End"))
 
     audio_path = run_dir / "narration.wav"
